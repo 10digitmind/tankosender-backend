@@ -7,7 +7,6 @@ const {
 
 const {
   sendVerificationEmail,
-  sendPasswordResetEmail,
   paymentAlert,
   passwordUpdate
 } = require("../Nodemailer/sender");
@@ -222,7 +221,6 @@ const forgotPassword = async (req, res) => {
   const userEmail = user.email;
 
   await sendPasswordResetEmail(userEmail, user.username, resetUrl);
-
   res.json({ success: true, message: "Password reset email sent." });
 };
 
