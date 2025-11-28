@@ -1,0 +1,158 @@
+const mongoose = require("mongoose");
+
+const UserSchema = new mongoose.Schema({
+  email: { type: String, unique: true, required: true },
+  passwordHash: { type: String, required: true },
+  username: { type: String, trim: true },
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationToken: String,
+  createdAt: { type: Date, default: Date.now },
+  // models/User.js
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+
+  // other fields...
+});
+const SmtpSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
+  // A label so the user knows which SMTP this is
+  label: {
+    type: String,
+    required: true,
+  },
+
+  host: {
+    type: String,
+    required: true,
+  },
+
+  port: {
+    type: Number,
+    required: true,
+  },
+
+  secure: {
+    type: Boolean,
+    default: false,
+  },
+
+  username: {
+    type: String,
+    required: true,
+  },
+
+  password: {
+    type: String,
+    required: true,
+  },
+
+  // Tracks how many emails have been sent with this SMTP today
+  sentToday: {
+    type: Number,
+    default: 0,
+  },
+
+   failedToday: {
+    type: Number,
+    default: 0,
+  },
+
+   Totalsent: {
+    type: Number,
+    default: 0,
+  },
+    Totalfailed: {
+    type: Number,
+    default: 0,
+  },
+
+  // Reset daily at midnight or when sending starts
+  lastReset: {
+    type: Date,
+    default: Date.now,
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  dailyLimit: { type: Number, default: 200 } ,
+  isSubscribed:{
+     type: Boolean,
+    default: false,
+  },
+  connected: { type: Boolean, default: false },
+});
+
+const EmailJobSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+  smtpId: { type: mongoose.Schema.Types.ObjectId, ref: "SMTP" },
+
+  recipients: [String],             // original list added
+  pending: [String],            // unsent
+  sent: [String],               // successful
+ failed: [
+    {
+      email: { type: String },
+      reason: { type: String }
+    }
+  ],            // failed
+
+  from: String,
+  subject: String,
+   role: String,
+
+  messageType: {
+    type: String,
+    enum: ["html", "text"],
+    required: true
+  },
+
+  messageContent: String,
+
+  attachments: [
+    {
+      filename: String,
+      path: String
+    }
+  ],
+
+  batchSize: { type: Number, default: 100 },
+  interval: { type: Number, default: 2 }, // seconds
+
+  status: {
+    type: String,
+    enum: ["idle", "running", "paused", "completed", "error"],
+    default: "idle"
+  },
+
+  createdAt: { type: Date, default: Date.now }
+});
+
+const SubscriptionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+plan: { type: String, enum: ["free", "Premium"], required: true },
+amountUSD: { type: Number, required: true }, // amount you want to receive net
+status: { type: String, enum: ["pending", "active", "expired", "failed"], default: "pending" },
+startDate: { type: Date },
+endDate: { type: Date },
+isActive: { type: Boolean, default:false },
+subRequested: { type: Boolean, default:false },
+invoiceId: { type: String }, // NOWPayments invoice ID
+txId: { type: String }, // blockchain transaction ID
+ referenceId: { type: String, required: true, unique: true }, 
+});
+
+module.exports = {
+  User: mongoose.model("User", UserSchema),
+  SmtpSchema: mongoose.model("SMTP", SmtpSchema),
+  EmailJobSchema:mongoose.model("Emailjob", EmailJobSchema),
+  SubscriptionSchema:mongoose.model("Subscription", SubscriptionSchema)
+
+};
