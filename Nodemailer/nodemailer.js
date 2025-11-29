@@ -20,10 +20,10 @@ async function createTransporter() {
     'compile',
     hbs.default({ // note the `.default` when importing ESM
       viewEngine: {
-        partialsDir: path.resolve('./Views/'),
+        partialsDir: path.resolve('./views/'),
         defaultLayout: false
       },
-      viewPath: path.resolve('./Views/'),
+      viewPath: path.resolve('./views/'),
       extName: '.hbs'
     })
   );
