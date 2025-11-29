@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = 5000;
+const port = process.env.PORT || 5000;
 const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
@@ -13,7 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'http://localhost:3000',
   'https://tankosender-frontend.vercel.app/',
-  'https://tankosender-backend.onrender.com'
+  'https://tankosender-backend.onrender.com/',
+   
 ];
 
 app.use(cors({
@@ -22,6 +23,7 @@ app.use(cors({
 }));
 
 app.use(route)
+
 
 
 app.get('/', (req, res) => {
@@ -34,8 +36,8 @@ app.get('/', (req, res) => {
   .then(() => {
     console.log('connected the to database')
   
-    app.listen(PORT, () => {
-      console.log(`HTTPS server running on https://localhost:${PORT}`);
+    app.listen(port, () => {
+      console.log(`HTTPS server running on https://localhost:${port}`);
     });
   })
   .catch((error) => {
