@@ -8,6 +8,7 @@ async function createTransporter() {
     host:  process.env.BREVO_HOST,
     port: process.env.BREVO_PORT,
     secure: false,
+      requireTLS: true, 
     auth: {
       user: process.env.BREVO_USER,
       pass: process.env.BREVO_PASS
