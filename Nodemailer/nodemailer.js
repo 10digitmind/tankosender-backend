@@ -14,14 +14,13 @@ async function createTransporter() {
     }
   });
 
- transporter.use(
+const viewsPath = path.join(__dirname, '..', 'Views');
+
+transporter.use(
   'compile',
   hbs.default({
-    viewEngine: {
-      partialsDir: path.join(__dirname, 'Views'),
-      defaultLayout: false
-    },
-    viewPath: path.join(__dirname, 'Views'),
+    viewEngine: { partialsDir: viewsPath, defaultLayout: false },
+    viewPath: viewsPath,
     extName: '.hbs'
   })
 );
