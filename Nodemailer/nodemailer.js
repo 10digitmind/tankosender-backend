@@ -15,7 +15,7 @@ async function createTransporter() {
     }
   });
 
-const viewsPath = path.join(__dirname, "..", "..", "..", 'views');
+const viewsPath = path.join(__dirname, "..", "..", "..", 'Views');
 
 console.log('viewsPath',viewsPath)
 transporter.use(
