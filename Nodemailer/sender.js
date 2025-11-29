@@ -8,8 +8,8 @@ async function sendVerificationEmail(userEmail, userName, token) {
   const mailOptions = {
     from: "noreply@pay2view.io",
     to: userEmail,
-    subject: "Verify Your Email",
-    template: "verifyEmail", // template name without extension
+    subject:"Verify Your Email",
+    template:"verifyEmail", // template name without extension
     context: {
       name: userName,
       verificationUrl,
@@ -30,8 +30,8 @@ async function sendPasswordResetEmail(userEmail, userName, resetUrl) {
   const mailOptions = {
     from: "noreply@pay2view.io",
     to: userEmail,
-    subject: "Password reset  request",
-    template: "resetEmail", // template name without extension
+    subject:"Password reset  request",
+    template:"resetEmail", // template name without extension
     context: {
       name: userName,
       resetUrl,

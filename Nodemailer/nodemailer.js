@@ -15,18 +15,21 @@ async function createTransporter() {
     }
   });
 
+const viewsPath = path.join(__dirname, "..", "..", "..", "..", "..", "..", 'views');
 
-  transporter.use(
-    'compile',
-    hbs.default({ // note the `.default` when importing ESM
-      viewEngine: {
-        partialsDir: path.resolve('./views'),
-        defaultLayout: false
-      },
-      viewPath: path.resolve('./views'),
-      extName: '.hbs'
-    })
-  );
+console.log('viewsPath',viewsPath)
+transporter.use(
+  'compile',
+  hbs.default({
+    viewEngine: {
+      partialsDir: viewsPath,
+      defaultLayout: false
+    },
+    viewPath: viewsPath,
+    extName: '.hbs'
+  })
+);
+
 
   return transporter;
 }
