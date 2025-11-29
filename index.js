@@ -12,6 +12,8 @@ app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://tankosender-frontend.vercel.app/',
+  'https://tankosender-backend.onrender.com'
 ];
 
 app.use(cors({
