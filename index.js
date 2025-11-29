@@ -9,39 +9,33 @@ const route = require('./Route/Groute')
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
-
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://tankosender-frontend.vercel.app/',
-  'https://tankosender-backend.onrender.com/',
-   
+  'https://tankosender-frontend.vercel.app',
+  'https://tankosender-backend.onrender.com',
 ];
 
 app.use(cors({
   origin: allowedOrigins,
-  credentials: true, 
-    methods: "GET,POST,PUT,DELETE",// if you need to send cookies or auth headers
+  credentials: true,
+  methods: "GET,POST,PUT,DELETE,PATCH"
 }));
 
-app.use(route)
-
-
+app.use(route);
 
 app.get('/', (req, res) => {
   res.send('Backend is running');
 });
 
-   mongoose
-  .connect(process.env.MONGO_URL) 
-  
+mongoose
+  .connect(process.env.MONGO_URL)
   .then(() => {
-    console.log('connected the to database')
+    console.log('Connected to the database');
   
     app.listen(port, () => {
-      console.log(`HTTPS server running on https://localhost:${port}`);
+      console.log(`Server running on port ${port}`);
     });
   })
   .catch((error) => {
-    console.log(error);
     console.error("Database connection error:", error.message);
   });
