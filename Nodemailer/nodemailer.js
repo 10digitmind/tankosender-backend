@@ -15,19 +15,18 @@ async function createTransporter() {
     }
   });
 
-const viewsPath = path.join(process.cwd(), "backend", "views"); 
+const viewsPath = path.join(__dirname, "..", "..", "..", 'views');
 
-console.log("HBS PATH:", viewsPath); // Debug to make sure it's correct
-
+console.log('viewsPath',viewsPath)
 transporter.use(
-  "compile",
+  'compile',
   hbs.default({
     viewEngine: {
       partialsDir: viewsPath,
       defaultLayout: false
     },
     viewPath: viewsPath,
-    extName: ".hbs"
+    extName: '.hbs'
   })
 );
 
