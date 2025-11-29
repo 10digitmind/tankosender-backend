@@ -18,10 +18,10 @@ async function createTransporter() {
   'compile',
   hbs.default({
     viewEngine: {
-      partialsDir: path.join(__dirname, 'views'),
+      partialsDir: path.join(__dirname, 'Views'),
       defaultLayout: false
     },
-    viewPath: path.join(__dirname, 'views'),
+    viewPath: path.join(__dirname, 'Views'),
     extName: '.hbs'
   })
 );
