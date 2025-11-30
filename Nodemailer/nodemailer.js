@@ -1,9 +1,10 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
 
-async function createTransporter() {
-  const hbs = await import('nodemailer-express-handlebars'); // dynamic import
 
+ async function createTransporter() {
+// dynamic import
+  const { default: hbs } = await import('nodemailer-express-handlebars');
   const transporter = nodemailer.createTransport({
     host:  process.env.BREVO_HOST,
     port: process.env.BREVO_PORT,
@@ -15,7 +16,7 @@ async function createTransporter() {
     }
   });
 
-const viewsPath = path.join(__dirname, "Views");
+const viewsPath = path.join(__dirname, '..' ,"Views");
 console.log("viewsPath", viewsPath);
 
 transporter.use(
