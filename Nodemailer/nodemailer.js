@@ -13,7 +13,10 @@ const path = require('path');
     auth: {
       user: process.env.BREVO_USER,
       pass: process.env.BREVO_PASS
-    }
+    },
+  connectionTimeout: 20000,       // 20 seconds instead of default 10
+  greetingTimeout: 20000,         // optional: also increase greeting timeout
+  socketTimeout: 20000  
   });
 
 const viewsPath = path.join(__dirname, '..' ,"Views");
