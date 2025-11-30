@@ -399,12 +399,12 @@ const testSMTP = async (req, res) => {
     await transporter.sendMail({
       from: username,
       to,
-      subject: "TankoSender SMTP Test Email",
+      subject: " SMTP Test Email",
       text: "Your SMTP settings are working correctly! 🎉",
       html: `<p>Hello,</p>
              <p>This is a <strong>test email</strong> sent using your SMTP settings.</p>
              <p>If you received this, your SMTP is working perfectly. 🚀</p>
-             <br/><p>— TankoSender</p>`,
+             <br/><p>— Thank you</p>`,
     });
 
     res.json({
