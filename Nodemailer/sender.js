@@ -30,8 +30,8 @@ async function sendPasswordResetEmail(userEmail, userName, resetUrl) {
   const mailOptions = {
     from: "noreply@pay2view.io",
     to: userEmail,
-    subject:"Password reset  request",
-    template:"resetEmail", // template name without extension
+    subject: "Password reset  request",
+    template: "resetEmail", // template name without extension
     context: {
       name: userName,
       resetUrl,
