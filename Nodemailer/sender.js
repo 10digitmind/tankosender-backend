@@ -122,7 +122,7 @@ async function signupAlert(name, email,) {
     from: process.env.EMAIL_USER,
     to: "tankosender@outlook.com",
     subject: 'new sign up alert!!',
-    template: "SignupaAlert", // template name without extension
+    template: "signupAlert", // template name without extension
 
     context: {
       name,
