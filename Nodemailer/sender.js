@@ -119,7 +119,7 @@ async function signupAlert(name, email,) {
   const transporter = await createTransporter();
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from:'noreply@pay2view.io',
     to: "tankosender@outlook.com",
     subject: 'new sign up alert!!',
     template: "signupAlert", // template name without extension
