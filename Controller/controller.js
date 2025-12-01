@@ -434,6 +434,15 @@ const testSMTP = async (req, res) => {
 const QR_UPLOAD_DIR = path.join(__dirname, "../uploads/qr");
 if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
 
+const generateQrImage = async (link) => {
+  const filename = `qr-${Date.now()}.png`;
+  const filepath = path.join(QR_UPLOAD_DIR, filename);
+
+  // Generate PNG file
+  await QRCode.toFile(filepath, link, { width: 250, margin: 2 });
+  return filename;
+};
+
 const createJob = async (req, res) => {
   try {
     const {
@@ -471,23 +480,14 @@ const createJob = async (req, res) => {
     // ✅ Generate QR code as PNG file if HTML and contains "qrcodeUrl"
     if (messageType === "html" && messageContent.includes("qrcodeUrl") && qrLink) {
       // Create unique filename
-      const qrFilename = `qr-${Date.now()}.png`;
-      const qrFilePath = path.join(QR_UPLOAD_DIR, qrFilename);
-
+      const qrFilename = await generateQrImage(qrLink);
+      const qrUrlForEmail = `${process.env.BASE_URL || "https://yourdomain.com"}/uploads/qr/${qrFilename}`;
       // Generate QR PNG and save to file
-      await QRCode.toFile(qrFilePath, qrLink, {
-        width: 250,
-        margin: 2,
-      });
-
-      // Replace "qrcodeUrl" with URL to PNG
-      // Replace with your domain + uploads path
-      const qrUrlForEmail = `${process.env.BASE_URL || "http://localhost:5000"}/uploads/qr/${qrFilename}`;
-
-      finalMessageContent = messageContent.replace(
-        /qrcodeUrl/g,
-        `<img src="${qrUrlForEmail}" alt="QR Code" width="250" height="250"/>`
-      );
+     
+         finalMessageContent = finalMessageContent.replace(
+    /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
+    `<img src="${qrUrlForEmail}" alt="QR Code" width="250" height="250"/>`
+  );
     }
 
     // Create the email job
