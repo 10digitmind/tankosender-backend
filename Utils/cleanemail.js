@@ -98,7 +98,19 @@ async function startSending(jobId) {
         from: currentJob.from,
         to: email,
         subject: currentJob.subject,
-        attachments: currentJob.attachments || [],
+        attachments:  Array.isArray(currentJob.attachments)
+  ? currentJob.attachments.map((a) => ({
+      filename: a.filename,
+      path: a.path,        // make sure path is correct relative to server
+      contentType: a.mimetype || undefined
+    }))
+  : currentJob.attachments
+    ? [{
+        filename: currentJob.attachments.filename,
+        path: currentJob.attachments.path,
+        contentType: currentJob.attachments.mimetype || undefined
+      }]
+    : [],
         ...(currentJob.messageType === "html"
           ? { html: currentJob.messageContent }
           : { text: currentJob.messageContent })

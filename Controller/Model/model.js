@@ -96,7 +96,8 @@ const EmailJobSchema = new mongoose.Schema({
 
   recipients: [String],             // original list added
   pending: [String],            // unsent
-  sent: [String],               // successful
+  sent: [String], 
+  qrLink:String,           // successful
  failed: [
     {
       email: { type: String },
@@ -119,7 +120,9 @@ const EmailJobSchema = new mongoose.Schema({
   attachments: [
     {
       filename: String,
-      path: String
+      path: String,
+        mimetype: String,
+    size: Number,
     }
   ],
 

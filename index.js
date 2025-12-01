@@ -5,10 +5,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const route = require('./Route/Groute')
+const path = require("path");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const allowedOrigins = [
   'http://localhost:3000',
   'https://tankosender-frontend.vercel.app',

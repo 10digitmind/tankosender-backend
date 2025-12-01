@@ -21,6 +21,10 @@ const generateReferenceId = require("../Utils/referenceGenerator");
 const axios = require("axios");
 const { decrypt } = require("../Utils/Encryption");
 // Create SMTP
+const QRCode = require("qrcode");
+const  fs= require  ("fs");
+const  path =require ("path");
+
 
 const registerUser = async (req, res) => {
   try {
@@ -427,80 +431,163 @@ const testSMTP = async (req, res) => {
   }
 };
 
+const QR_UPLOAD_DIR = path.join(__dirname, "../uploads/qr");
+if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
+
 const createJob = async (req, res) => {
-  const { recipients, from, subject, messageType, messageContent, interval } =
-    req.body;
+  try {
+    const {
+      recipients,
+      from,
+      subject,
+      messageType,
+      messageContent,
+      interval,
+      qrLink,
+    } = req.body;
 
-  const emails = cleanEmailList(recipients);
+    // Clean recipient emails
+    const emails = cleanEmailList(recipients);
+    if (emails.length === 0)
+      return res.status(400).json({ error: "No valid emails found" });
+    if (emails.length > 100)
+      return res
+        .status(400)
+        .json({ error: "You can only send 100 emails at once" });
 
-  if (emails.length === 0) {
-    return res.status(400).json({ error: "No valid emails found" });
+    const currentSmtp = await SmtpSchema.findOne({ userId: req.user.id });
+
+    // Handle file attachments
+    const attachments = (req.files || []).map((file) => ({
+      filename: file.filename,
+      path: file.path,
+      mimetype: file.mimetype,
+      size: file.size,
+    }));
+
+    // Prepare final message content
+    let finalMessageContent = messageContent;
+
+    // ✅ Generate QR code as PNG file if HTML and contains "qrcodeUrl"
+    if (messageType === "html" && messageContent.includes("qrcodeUrl") && qrLink) {
+      // Create unique filename
+      const qrFilename = `qr-${Date.now()}.png`;
+      const qrFilePath = path.join(QR_UPLOAD_DIR, qrFilename);
+
+      // Generate QR PNG and save to file
+      await QRCode.toFile(qrFilePath, qrLink, {
+        width: 250,
+        margin: 2,
+      });
+
+      // Replace "qrcodeUrl" with URL to PNG
+      // Replace with your domain + uploads path
+      const qrUrlForEmail = `${process.env.BASE_URL || "http://localhost:5000"}/uploads/qr/${qrFilename}`;
+
+      finalMessageContent = messageContent.replace(
+        /qrcodeUrl/g,
+        `<img src="${qrUrlForEmail}" alt="QR Code" width="250" height="250"/>`
+      );
+    }
+
+    // Create the email job
+    const job = await EmailJobSchema.create({
+      userId: req.user.id,
+      smtpId: currentSmtp._id,
+      recipients: emails,
+      pending: emails,
+      sent: [],
+      failed: [],
+      from,
+      subject,
+      messageType,
+      messageContent: finalMessageContent,
+      attachments,
+      batchSize: emails.length || 100,
+      interval: interval || 2,
+      qrLink: qrLink || null, // save for reference
+    });
+
+    res.json({
+      message: "Job created successfully",
+      jobId: job._id,
+      totalEmails: emails.length,
+    });
+  } catch (err) {
+    console.error("Create job error:", err);
+    res.status(500).json({ error: err.message });
   }
-  if (emails.length > 100) {
-    return res
-      .status(400)
-      .json({ error: "you can only send 100 email at once" });
-  }
-  const currentSmtp = await SmtpSchema.findOne({ userId: req.user.id });
-
-  const job = await EmailJobSchema.create({
-    userId: req.user.id,
-    smtpId: currentSmtp._id,
-    recipients: emails,
-    pending: emails,
-    sent: [],
-    failed: [],
-    from,
-    subject,
-    messageType,
-    messageContent,
-    batchSize: emails.length || 100,
-    interval: interval || 2,
-  });
-
-  res.json({
-    message: "Job created",
-    jobId: job._id,
-    totalEmails: emails.length,
-  });
 };
+
+
+
 
 const editJob = async (req, res) => {
   try {
-    const job = await EmailJobSchema.findOne({
-      _id: req.params.id,
-    });
+    const job = await EmailJobSchema.findById(req.params.id);
+    if (!job) return res.status(404).json({ error: "Job not found" });
 
-    if (!job) {
-      return res.status(404).json({ error: "Job not found" });
-    }
-
-    const newEmails = cleanEmailList(req.body.recipients);
-
+    // Validate recipients
+    const newEmails = cleanEmailList(req.body.recipients || "");
     if (!newEmails.length) {
       return res.status(400).json({ error: "No valid emails provided" });
     }
     if (newEmails.length > 100) {
       return res
         .status(400)
-        .json({ error: "you can only send 100 email at once" });
+        .json({ error: "You can only send 100 emails at once" });
     }
-    // DELETE OLD EMAILS
+
+    // Update recipients & reset status
     job.recipients = [...newEmails];
     job.pending = [...newEmails];
     job.sent = [];
     job.failed = [];
 
-    // UPDATE OTHER FIELDS IF PROVIDED
+    // Update other fields
     job.subject = req.body.subject || job.subject;
     job.from = req.body.from || job.from;
     job.messageType = req.body.messageType || job.messageType;
     job.messageContent = req.body.messageContent || job.messageContent;
     job.batchSize = newEmails.length || job.batchSize;
     job.interval = req.body.interval || job.interval;
-
-    // RESET STATUS
+     job.qrLink = req.body.qrLink || job.qrLink;
     job.status = "idle";
+
+    // -------------------------
+    // HANDLE ATTACHMENTS
+    // -------------------------
+
+    // Start with old attachments
+    let attachments = job.attachments || [];
+
+    // Add new uploaded files
+    if (req.files && req.files.length > 0) {
+      const newFiles = req.files.map((file) => ({
+        filename: file.filename,
+        path: file.path,
+        mimetype: file.mimetype,
+        size: file.size,
+      }));
+      attachments = [...attachments, ...newFiles];
+    }
+
+    // Optional: Remove attachments sent in req.body.deleteAttachments
+    if (req.body.deleteAttachments) {
+      const toDelete = Array.isArray(req.body.deleteAttachments)
+        ? req.body.deleteAttachments
+        : [req.body.deleteAttachments];
+
+      attachments = attachments.filter((a) => !toDelete.includes(a.filename));
+
+      // Delete files from disk
+      toDelete.forEach((filename) => {
+        const filePath = path.join("uploads", filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+    }
+
+    job.attachments = attachments;
 
     await job.save();
 
@@ -509,9 +596,11 @@ const editJob = async (req, res) => {
       job,
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 const deleteJob = async (req, res) => {
   try {
@@ -658,7 +747,7 @@ const manualConfirmSubscription = async (req, res) => {
     const { referenceId } = req.params;
 
     // Find subscription
-    const subscription = await Subscription.findOne({ referenceId });
+    const subscription = await SubscriptionSchema.findOne({ referenceId });
     if (!subscription) {
       return res
         .status(404)
@@ -692,6 +781,7 @@ const manualConfirmSubscription = async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 };
+
 
 const getUserProfile = async (req, res) => {
   try {
@@ -733,7 +823,6 @@ const getEmailJob = async (req, res) => {
     res.status(500).json({ message: "Server error fetching email job" });
   }
 };
-
 
 
 const getSub = async (req, res) => {
