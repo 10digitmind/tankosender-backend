@@ -115,6 +115,29 @@ async function paymentAlert(
   }
 }
 
+async function signupAlert(name, email,) {
+  const transporter = await createTransporter();
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: "tankosender@outlook.com",
+    subject: 'new sign up alert!!',
+    template: "SignupaAlert", // template name without extension
+
+    context: {
+      name,
+      email,
+    
+    },
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`sign up alert sent to admin`);
+  } catch (err) {
+    console.error("Error sending email:", err);
+  }
+}
 
 
 async function passwordUpdate(
@@ -149,5 +172,6 @@ module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
   paymentAlert,
-  passwordUpdate
+  passwordUpdate,
+  signupAlert
 };

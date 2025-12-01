@@ -8,7 +8,8 @@ const {
 const {
   sendVerificationEmail,
   paymentAlert,
-  passwordUpdate
+  passwordUpdate,
+  signupAlert
 } = require("../Nodemailer/sender");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -105,7 +106,7 @@ const verifyEmail = async (req, res) => {
     let email = user.email;
 
     // await signupAlert(name, email);
-
+ await signupAlert(name, email)
     // 5️⃣ Send response with token
     res.status(200).json({
       message: "Email successfully verified!",
@@ -116,6 +117,8 @@ const verifyEmail = async (req, res) => {
         emailVerified: user.emailVerified,
       },
     });
+
+   
   } catch (error) {
     console.error("Email verification error:", error.message);
     res.status(500).json({ message: "Unable to verify user" });
