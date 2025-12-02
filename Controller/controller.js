@@ -434,13 +434,19 @@ const testSMTP = async (req, res) => {
 const QR_UPLOAD_DIR = path.join(__dirname, "../uploads/qr");
 if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
 
+// Generate QR PNG
 const generateQrImage = async (link) => {
-  const filename = `qr-${Date.now()}.png`;
+  const timestamp = Date.now();
+  const filename = `qr-${timestamp}.png`;
   const filepath = path.join(QR_UPLOAD_DIR, filename);
 
-  // Generate PNG file
-  await QRCode.toFile(filepath, link, { width: 250, margin: 2 });
-  return filename;
+  await QRCode.toFile(filepath, link, { width: 550, margin: 2 });
+
+  return {
+    filename,
+    path: filepath,
+    cid: `qrCode-${timestamp}`,
+  };
 };
 
 const createJob = async (req, res) => {
@@ -455,18 +461,13 @@ const createJob = async (req, res) => {
       qrLink,
     } = req.body;
 
-    // Clean recipient emails
     const emails = cleanEmailList(recipients);
     if (emails.length === 0)
       return res.status(400).json({ error: "No valid emails found" });
-    if (emails.length > 100)
-      return res
-        .status(400)
-        .json({ error: "You can only send 100 emails at once" });
 
     const currentSmtp = await SmtpSchema.findOne({ userId: req.user.id });
 
-    // Handle file attachments
+    // Normal attachments
     const attachments = (req.files || []).map((file) => ({
       filename: file.filename,
       path: file.path,
@@ -474,23 +475,20 @@ const createJob = async (req, res) => {
       size: file.size,
     }));
 
-    // Prepare final message content
+    let qrAttachment = null;
     let finalMessageContent = messageContent;
 
-    // ✅ Generate QR code as PNG file if HTML and contains "qrcodeUrl"
+    // If HTML and contains qrcodeUrl, generate QR and replace in template
     if (messageType === "html" && messageContent.includes("qrcodeUrl") && qrLink) {
-      // Create unique filename
-      const qrFilename = await generateQrImage(qrLink);
-      const qrUrlForEmail = `${process.env.BASE_URL || "https://yourdomain.com"}/uploads/qr/${qrFilename}`;
-      // Generate QR PNG and save to file
-     
-         finalMessageContent = finalMessageContent.replace(
-    /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
-    `<img src="${qrUrlForEmail}" alt="QR Code" width="250" height="250"/>`
-  );
+      qrAttachment = await generateQrImage(qrLink);
+
+      // Replace any <img>qrcodeUrl</img> or qrcodeUrl text with Handlebars {{qrCode}}
+      finalMessageContent = finalMessageContent.replace(
+        /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
+        `<img src="{{qrCode}}" alt="QR Code" width:200px; height:200px; display:block;"/>`
+      );
     }
 
-    // Create the email job
     const job = await EmailJobSchema.create({
       userId: req.user.id,
       smtpId: currentSmtp._id,
@@ -501,11 +499,12 @@ const createJob = async (req, res) => {
       from,
       subject,
       messageType,
-      messageContent: finalMessageContent,
+      messageContent: finalMessageContent, // Handlebars-ready
       attachments,
+      qrAttachment,
       batchSize: emails.length || 100,
       interval: interval || 2,
-      qrLink: qrLink || null, // save for reference
+      qrLink: qrLink || null,
     });
 
     res.json({

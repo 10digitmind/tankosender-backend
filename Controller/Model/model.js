@@ -104,7 +104,11 @@ const EmailJobSchema = new mongoose.Schema({
       reason: { type: String }
     }
   ],            // failed
-
+qrAttachment: {
+  filename: String, // the file name, e.g., "qr-1764627771813.png"
+  path: String,     // server path to the file, e.g., "/uploads/qr/qr-1764627771813.png"
+  cid: String       // the Content-ID used in the email HTML, e.g., "qrCode-1764627771813"
+},
   from: String,
   subject: String,
    role: String,
