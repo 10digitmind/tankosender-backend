@@ -16,7 +16,7 @@ const path = require('path');
   });
 
 const viewsPath = path.join(__dirname, '..' ,"Views");
-console.log("viewsPath", viewsPath);
+
 
 transporter.use(
   "compile",

@@ -431,7 +431,8 @@ const testSMTP = async (req, res) => {
   }
 };
 
-const QR_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "qr");
+const QR_UPLOAD_DIR = path.join(__dirname, '..', "uploads", "qr");
+
 if (!fs.existsSync(QR_UPLOAD_DIR)) {
   fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
   console.log("Created QR_UPLOAD_DIR:", QR_UPLOAD_DIR);
@@ -493,6 +494,7 @@ const createJob = async (req, res) => {
         `<img src="{{qrCode}}" alt="QR Code" width:200; height:200; display:block;"/>`
       );
     }
+
 
     const job = await EmailJobSchema.create({
       userId: req.user.id,
@@ -559,7 +561,7 @@ const editJob = async (req, res) => {
      job.qrLink = req.body.qrLink || job.qrLink;
       job.fromName = req.body.fromName || job.fromName;
     job.status = "idle";
-
+console.log('payh',QR_UPLOAD_DIR)
     // -------------------------
     // HANDLE ATTACHMENTS
     // -------------------------
