@@ -91,7 +91,6 @@ const ROOT = path.resolve(process.cwd());
     : []),
 ];
 
-
     // Compile Handlebars template in memory
     let htmlContent = currentJob.messageContent;
     if (currentJob.messageType === "html") {

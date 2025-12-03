@@ -486,13 +486,15 @@ const createJob = async (req, res) => {
 
     // If HTML and contains qrcodeUrl, generate QR and replace in template
     if (messageType === "html" && messageContent.includes("qrcodeUrl") && qrLink) {
-      
+
       qrAttachment = await generateQrImage(qrLink);
 
       // Replace any <img>qrcodeUrl</img> or qrcodeUrl text with Handlebars {{qrCode}}
       finalMessageContent = finalMessageContent.replace(
         /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
-        `<img src="{{qrCode}}" alt="QR Code" width:200; height:200; display:block;"/>`
+        `<img src="{{qrCode}}" alt="QR Code"
+     style="display:block; margin:0 auto; width:150px; height:150px;" />
+`
       );
     }
 
@@ -562,7 +564,7 @@ const editJob = async (req, res) => {
      job.qrLink = req.body.qrLink || job.qrLink;
       job.fromName = req.body.fromName || job.fromName;
     job.status = "idle";
-console.log('payh',QR_UPLOAD_DIR)
+
     // -------------------------
     // HANDLE ATTACHMENTS
     // -------------------------
