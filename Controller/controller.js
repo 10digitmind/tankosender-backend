@@ -459,6 +459,7 @@ const createJob = async (req, res) => {
       messageContent,
       interval,
       qrLink,
+      fromName,
     } = req.body;
 
     const emails = cleanEmailList(recipients);
@@ -497,6 +498,7 @@ const createJob = async (req, res) => {
       sent: [],
       failed: [],
       from,
+      fromName,
       subject,
       messageType,
       messageContent: finalMessageContent, // Handlebars-ready
@@ -551,6 +553,7 @@ const editJob = async (req, res) => {
     job.batchSize = newEmails.length || job.batchSize;
     job.interval = req.body.interval || job.interval;
      job.qrLink = req.body.qrLink || job.qrLink;
+      job.fromName = req.body.fromName || job.fromName;
     job.status = "idle";
 
     // -------------------------

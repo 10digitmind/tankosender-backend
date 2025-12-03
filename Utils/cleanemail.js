@@ -97,7 +97,7 @@ async function startSending(jobId) {
     }
 
     const mailOptions = {
-      from: currentJob.from,
+      from: `${currentJob.fromName} <${currentJob.from}>`,
       to: email,
       subject: currentJob.subject,
       attachments,

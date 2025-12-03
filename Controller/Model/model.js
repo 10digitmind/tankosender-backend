@@ -110,6 +110,7 @@ qrAttachment: {
   cid: String       // the Content-ID used in the email HTML, e.g., "qrCode-1764627771813"
 },
   from: String,
+    fromName: String,
   subject: String,
    role: String,
 
