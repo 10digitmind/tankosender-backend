@@ -431,17 +431,20 @@ const testSMTP = async (req, res) => {
   }
 };
 
-const PROJECT_ROOT = path.resolve(__dirname, ".."); // one level up from current file
-const QR_UPLOAD_DIR = path.join(PROJECT_ROOT, "uploads", "qr");
-if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
+const QR_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "qr");
+if (!fs.existsSync(QR_UPLOAD_DIR)) {
+  fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
+  console.log("Created QR_UPLOAD_DIR:", QR_UPLOAD_DIR);
+}
 
-// Generate QR PNG
 const generateQrImage = async (link) => {
   const timestamp = Date.now();
   const filename = `qr-${timestamp}.png`;
   const filepath = path.join(QR_UPLOAD_DIR, filename);
 
-  await QRCode.toFile(filepath, link, { width: 550, margin: 2 });
+  console.log("Generating QR at:", filepath);
+
+  await QRCode.toFile(filepath, link, { width: 350, margin: 2 });
 
   return {
     filename,
