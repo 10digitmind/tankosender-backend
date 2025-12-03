@@ -431,7 +431,7 @@ const testSMTP = async (req, res) => {
   }
 };
 
-const QR_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "qr");
+const QR_UPLOAD_DIR = path.join(__dirname, "..", "uploads/qr");
 if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
 
 // Generate QR PNG
