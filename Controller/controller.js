@@ -431,7 +431,8 @@ const testSMTP = async (req, res) => {
   }
 };
 
-const QR_UPLOAD_DIR = path.join(__dirname, "..", "uploads/qr");
+const PROJECT_ROOT = path.resolve(__dirname, ".."); // one level up from current file
+const QR_UPLOAD_DIR = path.join(PROJECT_ROOT, "uploads", "qr");
 if (!fs.existsSync(QR_UPLOAD_DIR)) fs.mkdirSync(QR_UPLOAD_DIR, { recursive: true });
 
 // Generate QR PNG
@@ -486,7 +487,7 @@ const createJob = async (req, res) => {
       // Replace any <img>qrcodeUrl</img> or qrcodeUrl text with Handlebars {{qrCode}}
       finalMessageContent = finalMessageContent.replace(
         /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
-        `<img src="{{qrCode}}" alt="QR Code" width:200px; height:200px; display:block;"/>`
+        `<img src="{{qrCode}}" alt="QR Code" width:200; height:200; display:block;"/>`
       );
     }
 
