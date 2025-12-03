@@ -486,6 +486,7 @@ const createJob = async (req, res) => {
 
     // If HTML and contains qrcodeUrl, generate QR and replace in template
     if (messageType === "html" && messageContent.includes("qrcodeUrl") && qrLink) {
+      
       qrAttachment = await generateQrImage(qrLink);
 
       // Replace any <img>qrcodeUrl</img> or qrcodeUrl text with Handlebars {{qrCode}}

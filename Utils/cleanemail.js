@@ -3,6 +3,7 @@ const {EmailJobSchema, SmtpSchema,SubscriptionSchema} = require("../Controller/M
 const { decrypt } = require("./Encryption");
 const   Handlebars = require("handlebars")  
 
+const  path =require ("path");
 
 const disposableDomains = [
   "mailinator.com",
@@ -70,22 +71,26 @@ async function startSending(jobId) {
     }
 
     const email = currentJob.pending[0];
+const ROOT = path.resolve(process.cwd());
 
     // Combine attachments + QR code
-    const attachments = [
-      ...(Array.isArray(currentJob.attachments)
-        ? currentJob.attachments.map(a => ({
-            filename: a.filename,
-            path: a.path,
-            contentType: a.mimetype || undefined
-          }))
-        : currentJob.attachments
-        ? [{ filename: currentJob.attachments.filename, path: currentJob.attachments.path, contentType: currentJob.attachments.mimetype || undefined }]
-        : []),
-      ...(currentJob.qrAttachment
-        ? [currentJob.qrAttachment]
-        : []),
-    ];
+   const attachments = [
+  ...(Array.isArray(currentJob.attachments)
+    ? currentJob.attachments.map(a => ({
+        filename: a.filename,
+        path: path.join(ROOT, "uploads", "qr", a.filename),
+        contentType: a.mimetype || undefined,
+      }))
+    : []),
+  ...(currentJob.qrAttachment
+    ? [{
+        filename: currentJob.qrAttachment.filename,
+        path: path.join(ROOT, "uploads", "qr", currentJob.qrAttachment.filename),
+        cid: currentJob.qrAttachment.cid
+      }]
+    : []),
+];
+
 
     // Compile Handlebars template in memory
     let htmlContent = currentJob.messageContent;
