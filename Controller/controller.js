@@ -493,7 +493,7 @@ const createJob = async (req, res) => {
       finalMessageContent = finalMessageContent.replace(
         /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
         `<img src="{{qrCode}}" alt="QR Code"
-     style="display:block; margin:0 auto; width:150px; height:150px;" />
+     style="display:block; margin:0 auto; width:200px; height:200px;" />
 `
       );
     }
