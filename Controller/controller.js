@@ -493,7 +493,7 @@ const createJob = async (req, res) => {
       finalMessageContent = finalMessageContent.replace(
         /<img[^>]*>?\s*qrcodeUrl\s*<\/img>?|qrcodeUrl/g,
         `<img src="{{qrCode}}" alt="QR Code"
-     style="display:block; margin:0 auto; width:200px; height:200px;" />
+     style="display:block; margin:0 auto; width:250px; height:150px;" />
 `
       );
     }
@@ -530,49 +530,45 @@ const createJob = async (req, res) => {
 };
 
 
-
-
 const editJob = async (req, res) => {
   try {
     const job = await EmailJobSchema.findById(req.params.id);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
-    // Validate recipients
+    // -------------------------
+    // RECIPIENTS
+    // -------------------------
     const newEmails = cleanEmailList(req.body.recipients || "");
-    if (!newEmails.length) {
+    if (!newEmails.length)
       return res.status(400).json({ error: "No valid emails provided" });
-    }
-    if (newEmails.length > 100) {
+    if (newEmails.length > 100)
       return res
         .status(400)
         .json({ error: "You can only send 100 emails at once" });
-    }
 
-    // Update recipients & reset status
     job.recipients = [...newEmails];
     job.pending = [...newEmails];
     job.sent = [];
     job.failed = [];
 
-    // Update other fields
+    // -------------------------
+    // UPDATE BASIC FIELDS
+    // -------------------------
     job.subject = req.body.subject || job.subject;
     job.from = req.body.from || job.from;
+    job.fromName = req.body.fromName || job.fromName;
     job.messageType = req.body.messageType || job.messageType;
     job.messageContent = req.body.messageContent || job.messageContent;
     job.batchSize = newEmails.length || job.batchSize;
     job.interval = req.body.interval || job.interval;
-     job.qrLink = req.body.qrLink || job.qrLink;
-      job.fromName = req.body.fromName || job.fromName;
+    job.qrLink = req.body.qrLink || job.qrLink;
     job.status = "idle";
 
     // -------------------------
     // HANDLE ATTACHMENTS
     // -------------------------
-
-    // Start with old attachments
     let attachments = job.attachments || [];
 
-    // Add new uploaded files
     if (req.files && req.files.length > 0) {
       const newFiles = req.files.map((file) => ({
         filename: file.filename,
@@ -583,15 +579,12 @@ const editJob = async (req, res) => {
       attachments = [...attachments, ...newFiles];
     }
 
-    // Optional: Remove attachments sent in req.body.deleteAttachments
     if (req.body.deleteAttachments) {
       const toDelete = Array.isArray(req.body.deleteAttachments)
         ? req.body.deleteAttachments
         : [req.body.deleteAttachments];
 
       attachments = attachments.filter((a) => !toDelete.includes(a.filename));
-
-      // Delete files from disk
       toDelete.forEach((filename) => {
         const filePath = path.join("uploads", filename);
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -599,6 +592,40 @@ const editJob = async (req, res) => {
     }
 
     job.attachments = attachments;
+
+    // -------------------------
+    // HANDLE QR CODE
+    // -------------------------
+    const htmlContainsPlaceholder =
+      job.messageContent.includes("{{qrCode}}") ||
+      job.messageContent.includes("qrcodeUrl");
+
+    if (job.messageType === "text") {
+      // Text mode → always remove QR
+      if (job.qrAttachment?.path && fs.existsSync(job.qrAttachment.path)) {
+        fs.unlinkSync(job.qrAttachment.path);
+      }
+      job.qrAttachment = null;
+    } else if (job.messageType === "html" && htmlContainsPlaceholder) {
+      // HTML mode → regenerate QR every time if placeholder exists
+      if (job.qrAttachment?.path && fs.existsSync(job.qrAttachment.path)) {
+        fs.unlinkSync(job.qrAttachment.path);
+      }
+
+      job.qrAttachment = await generateQrImage(job.qrLink);
+
+      // Ensure placeholder is correct
+      job.messageContent = job.messageContent.replace(
+        /qrcodeUrl/g,
+        `<img src="{{qrCode}}" alt="QR Code" style="display:block; margin:0 auto; width:150px;height:150px;" />`
+      );
+    } else {
+      // HTML without placeholder → remove QR
+      if (job.qrAttachment?.path && fs.existsSync(job.qrAttachment.path)) {
+        fs.unlinkSync(job.qrAttachment.path);
+      }
+      job.qrAttachment = null;
+    }
 
     await job.save();
 
@@ -611,6 +638,9 @@ const editJob = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
 
 
 const deleteJob = async (req, res) => {

@@ -47,6 +47,8 @@ if (!raw) return [];
 
 
 async function startSending(jobId) {
+  const ROOT = path.resolve(process.cwd());
+
   const job = await EmailJobSchema.findById(jobId).populate("smtpId");
   if (!job || job.status !== "running") return;
 
@@ -64,39 +66,53 @@ async function startSending(jobId) {
   while (true) {
     const currentJob = await EmailJobSchema.findById(jobId).populate("smtpId");
     if (!currentJob || currentJob.status !== "running") return;
-    if (currentJob.pending.length === 0) {
+    if (!currentJob.pending.length) {
       currentJob.status = "completed";
       await currentJob.save();
       return;
     }
 
     const email = currentJob.pending[0];
-const ROOT = path.resolve(process.cwd());
 
-    // Combine attachments + QR code
-   const attachments = [
-  ...(Array.isArray(currentJob.attachments)
-    ? currentJob.attachments.map(a => ({
-        filename: a.filename,
-        path: path.join(ROOT, "uploads", "qr", a.filename),
-        contentType: a.mimetype || undefined,
-      }))
-    : []),
-  ...(currentJob.qrAttachment
-    ? [{
+    // -------------------------
+    // SAFE ATTACHMENTS
+    // -------------------------
+    const attachments = [];
+
+    if (Array.isArray(currentJob.attachments)) {
+      currentJob.attachments.forEach(a => {
+        if (!a?.filename || !a?.path) return;
+        attachments.push({
+          filename: a.filename,
+          path: path.isAbsolute(a.path) ? a.path : path.join(ROOT, a.path),
+          contentType: a.mimetype
+        });
+      });
+    }
+
+    // QR attachment only if HTML and QR exists
+    if (
+      currentJob.messageType === "html" &&
+      currentJob.qrAttachment?.filename &&
+      currentJob.qrAttachment?.path
+    ) {
+      attachments.push({
         filename: currentJob.qrAttachment.filename,
-        path: path.join(ROOT, "uploads", "qr", currentJob.qrAttachment.filename),
+        path: path.isAbsolute(currentJob.qrAttachment.path)
+          ? currentJob.qrAttachment.path
+          : path.join(ROOT, "uploads", "qr", currentJob.qrAttachment.filename),
         cid: currentJob.qrAttachment.cid
-      }]
-    : []),
-];
+      });
+    }
 
-    // Compile Handlebars template in memory
+    // -------------------------
+    // HANDLE HTML CONTENT
+    // -------------------------
     let htmlContent = currentJob.messageContent;
     if (currentJob.messageType === "html") {
       const template = Handlebars.compile(htmlContent);
       htmlContent = template({
-        qrCode: currentJob.qrAttachment ? `cid:${currentJob.qrAttachment.cid}` : ""
+        qrCode: currentJob.qrAttachment ? `cid:${currentJob.qrAttachment.cid}` : "",
       });
     }
 
@@ -105,7 +121,9 @@ const ROOT = path.resolve(process.cwd());
       to: email,
       subject: currentJob.subject,
       attachments,
-      ...(currentJob.messageType === "html" ? { html: htmlContent } : { text: currentJob.messageContent })
+      ...(currentJob.messageType === "html"
+        ? { html: htmlContent }
+        : { text: currentJob.messageContent }),
     };
 
     try {
@@ -116,9 +134,8 @@ const ROOT = path.resolve(process.cwd());
       await currentJob.save();
 
       await SmtpSchema.findByIdAndUpdate(currentJob.smtpId, {
-        $inc: { sentToday: 1, Totalsent: 1 }
+        $inc: { sentToday: 1, Totalsent: 1 },
       });
-
     } catch (err) {
       console.error("Send email error:", err);
       currentJob.failed.push({ email, reason: err.message });
@@ -126,9 +143,10 @@ const ROOT = path.resolve(process.cwd());
       return;
     }
 
-    await new Promise(r => setTimeout(r, currentJob.interval * 1000));
+    await new Promise(r => setTimeout(r, (currentJob.interval || 2) * 1000));
   }
 }
+
 
 
 
