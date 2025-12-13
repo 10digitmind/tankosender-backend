@@ -220,7 +220,7 @@ async function embedRemoteImages(html) {
 }
 
 
-function clearQrFolder() {
+function clearUploadsFolder() {
   const ROOT = path.resolve(process.cwd());
   const qrFolder = path.join(ROOT, "uploads", "qr");
 
@@ -256,39 +256,6 @@ module.exports = {generateReferenceId,injectQrAtPlaceholder,htmlToPdf,htmlToEml,
 
 
 
-function clearUploadsFolder() {
-  const ROOT = path.resolve(process.cwd());
-  const uploadsFolder = path.join(ROOT, "uploads");
-
-  if (!fs.existsSync(uploadsFolder)) {
-    console.log("Uploads folder does not exist.");
-    return;
-  }
-
-  const items = fs.readdirSync(uploadsFolder);
-
-  items.forEach((item) => {
-    const itemPath = path.join(uploadsFolder, item);
-
-    // Skip 'qr' folder
-    if (item === "qr") return;
-
-    try {
-      const stat = fs.statSync(itemPath);
-      if (stat.isFile()) {
-        fs.unlinkSync(itemPath);
-        console.log(`Deleted file: ${item}`);
-      } else if (stat.isDirectory()) {
-        fs.rmSync(itemPath, { recursive: true, force: true });
-        console.log(`Deleted folder: ${item}`);
-      }
-    } catch (err) {
-      console.error(`Error deleting ${item}:`, err.message);
-    }
-  });
-
-  console.log("Uploads folder cleared (except qr)!");
-}
 
 
 
