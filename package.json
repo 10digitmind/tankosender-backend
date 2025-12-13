@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sparticuz/chromium": "^143.0.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -38,7 +39,7 @@
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^2.16.105",
     "playwright": "^1.57.0",
-    "puppeteer": "^24.33.0",
+    "puppeteer-core": "^24.33.0",
     "qrcode": "^1.5.4",
     "sqlite3": "^5.1.7",
     "tronweb": "^6.1.0",

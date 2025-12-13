@@ -3,9 +3,11 @@ const fs = require("fs");
 const  { PDFDocument, rgb } =  require ("pdf-lib");
 const pdfjsLib = require ("pdfjs-dist/legacy/build/pdf.js");
 const path = require('path')
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
 const MailComposer = require("nodemailer/lib/mail-composer");
-const { chromium } = require("playwright");
+
+const chromium = require("@sparticuz/chromium");
+
 function generateReferenceId(userId) {
     const timestamp = Date.now();
     const random = crypto.randomBytes(3).toString("hex"); // 6 hex chars
@@ -107,19 +109,26 @@ const generateQrImage = async (link) => {
 
 
 
-
+const isProd = process.env.NODE_ENV === "production";
 
 
 async function htmlToPdf(htmlContent, pdfPath) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-    ],
-  });
+
+
+const browser = await puppeteer.launch(
+  isProd
+    ? {
+        // ✅ Production (Linux / serverless)
+        args: chromium.args,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless
+      }
+    : {
+        // ✅ Local macOS / Windows
+        channel: "chrome",
+        headless: "new"
+      }
+);
 
   const page = await browser.newPage();
 
