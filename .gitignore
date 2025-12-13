@@ -1,0 +1,15 @@
+# Environment variables
+.env
+
+# Node dependencies
+node_modules/
+
+# Puppeteer / Chrome binaries
+.cache/
+.cache/puppeteer/
+**/.local-chromium/
+**/puppeteer/.cache/
+**/puppeteer/.local-chromium/
+
+# OS files
+.DS_Store
