@@ -240,7 +240,7 @@ function clearUploadsFolder() {
         console.log(`Deleted file: ${item}`);
       } else if (stat.isDirectory()) {
         fs.rmSync(itemPath, { recursive: true, force: true }); // delete folder inside qr if any
-        console.log(`Deleted folder inside qr: ${item}`);
+      
       }
     } catch (err) {
       console.error(`Error deleting ${item}:`, err.message);

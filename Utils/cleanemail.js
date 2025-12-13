@@ -250,7 +250,7 @@ async function startSending(jobId) {
       attachments.forEach(att => {
         if (att?.path && fs.existsSync(att.path)) {
           fs.unlinkSync(att.path);
-          console.log(`Deleted attachment: ${att.filename}`);
+         ;
         }
       });
     
