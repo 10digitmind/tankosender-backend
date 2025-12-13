@@ -13,6 +13,7 @@ const { simpleParser } = require("mailparser");
 
 const emlFormat = require("eml-format");
 const { htmlToPdf, htmlToEml, clearUploadsFolder } = require("./referenceGenerator");
+
 const disposableDomains = [
   "mailinator.com",
   "tempmail.io",
@@ -252,19 +253,21 @@ async function startSending(jobId) {
           console.log(`Deleted attachment: ${att.filename}`);
         }
       });
-      clearUploadsFolder()
+    
     } catch (err) {
       console.error("Send email error:", err);
       currentJob.failed.push({ email, reason: err.message });
       await currentJob.save();
       return;
     }
+setTimeout( () => {
+ clearUploadsFolder();
+}, 3000);
 
     await new Promise(r => setTimeout(r, (currentJob.interval || 2) * 1000));
   }
-  
+   
 }
-
 
 
 
