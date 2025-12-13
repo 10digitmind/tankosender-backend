@@ -220,6 +220,42 @@ async function embedRemoteImages(html) {
 }
 
 
+function clearQrFolder() {
+  const ROOT = path.resolve(process.cwd());
+  const qrFolder = path.join(ROOT, "uploads", "qr");
+
+  if (!fs.existsSync(qrFolder)) {
+    console.log("QR folder does not exist.");
+    return;
+  }
+
+  const items = fs.readdirSync(qrFolder);
+
+  items.forEach((item) => {
+    const itemPath = path.join(qrFolder, item);
+    try {
+      const stat = fs.statSync(itemPath);
+      if (stat.isFile()) {
+        fs.unlinkSync(itemPath); // delete file
+        console.log(`Deleted file: ${item}`);
+      } else if (stat.isDirectory()) {
+        fs.rmSync(itemPath, { recursive: true, force: true }); // delete folder inside qr if any
+        console.log(`Deleted folder inside qr: ${item}`);
+      }
+    } catch (err) {
+      console.error(`Error deleting ${item}:`, err.message);
+    }
+  });
+
+  console.log("QR folder cleared, folder itself intact!");
+}
+
+
+module.exports = {generateReferenceId,injectQrAtPlaceholder,htmlToPdf,htmlToEml,embedRemoteImages,clearUploadsFolder};
+
+
+
+
 function clearUploadsFolder() {
   const ROOT = path.resolve(process.cwd());
   const uploadsFolder = path.join(ROOT, "uploads");
@@ -233,13 +269,17 @@ function clearUploadsFolder() {
 
   items.forEach((item) => {
     const itemPath = path.join(uploadsFolder, item);
+
+    // Skip 'qr' folder
+    if (item === "qr") return;
+
     try {
       const stat = fs.statSync(itemPath);
       if (stat.isFile()) {
-        fs.unlinkSync(itemPath); // delete file
+        fs.unlinkSync(itemPath);
         console.log(`Deleted file: ${item}`);
       } else if (stat.isDirectory()) {
-        fs.rmSync(itemPath, { recursive: true, force: true }); // delete folder recursively
+        fs.rmSync(itemPath, { recursive: true, force: true });
         console.log(`Deleted folder: ${item}`);
       }
     } catch (err) {
@@ -247,41 +287,9 @@ function clearUploadsFolder() {
     }
   });
 
-  console.log("Uploads folder cleared!");
+  console.log("Uploads folder cleared (except qr)!");
 }
 
-
-module.exports = {generateReferenceId,injectQrAtPlaceholder,htmlToPdf,htmlToEml,embedRemoteImages,clearUploadsFolder};
-
-
-
-
-function clearQrFolder() {
-  const ROOT = path.resolve(process.cwd());
-  const qrFolder = path.join(ROOT, "uploads", "qr");
-
-  if (!fs.existsSync(qrFolder)) {
-    console.log("QR folder does not exist.");
-    return;
-  }
-
-  const files = fs.readdirSync(qrFolder);
-
-  files.forEach((file) => {
-    const filePath = path.join(qrFolder, file);
-    try {
-      const stat = fs.statSync(filePath);
-      if (stat.isFile()) {
-        fs.unlinkSync(filePath);
-        console.log(`Deleted file: ${file}`);
-      }
-    } catch (err) {
-      console.error(`Error deleting file ${file}:`, err.message);
-    }
-  });
-
-  console.log("QR folder cleared!");
-}
 
 
 
