@@ -531,7 +531,7 @@ const editJob = async (req, res) => {
     job.messageBody = req.body.messageBody ;
     job.htmlAttachment = req.body.htmlAttachment 
     job.sendAs = req.body.sendAs || job.sendAs;
-    job.qrLink = req.body.qrLink || job.qrLink;
+    job.qrLink = req.body.qrLink 
     job.interval = req.body.interval || job.interval;
     job.status = "idle";
 
