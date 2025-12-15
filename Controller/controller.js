@@ -458,8 +458,9 @@ const dataUrl = await QRCode.toDataURL(link, { width: 350, margin: 2 });
 
 const createJob = async (req, res) => {
   try {
-    const { recipients, from, fromName, subject, messageType, messageBody, htmlAttachment, sendAs, interval, qrLink } = req.body;
+    const { recipients, from, fromName, subject, messageType, messageBody, htmlAttachment, sendAs, userFileName,interval, qrLink } = req.body;
 
+    console.log('userfile',userFileName)
     // Clean and validate emails
     const emails = Array.isArray(cleanEmailList(recipients)) ? cleanEmailList(recipients) : [];
     if (!emails.length) return res.status(400).json({ error: "No valid emails found" });
@@ -478,6 +479,7 @@ const createJob = async (req, res) => {
       failed: [],
       from,
       fromName,
+      userFileName:userFileName || "",
       subject,
       messageType,
       messageBody,
@@ -533,6 +535,7 @@ const editJob = async (req, res) => {
     job.sendAs = req.body.sendAs || job.sendAs;
     job.qrLink = req.body.qrLink 
     job.interval = req.body.interval || job.interval;
+    job.userFileName= req.body.userFileName;
     job.status = "idle";
 
     // -------------------------

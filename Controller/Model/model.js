@@ -130,6 +130,9 @@ qrAttachment: {
     size: Number,
     }
   ],
+
+userFileName: { type: String, default: "" },
+
   
    messageBody: String,       // **new field for the email body**
   htmlAttachment: String,    // **new field if user pastes HTML to send as file**

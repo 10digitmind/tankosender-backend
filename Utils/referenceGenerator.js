@@ -5,7 +5,7 @@ const pdfjsLib = require ("pdfjs-dist/legacy/build/pdf.js");
 const path = require('path')
 const puppeteer = require("puppeteer-core");
 const MailComposer = require("nodemailer/lib/mail-composer");
-
+const sharp = require("sharp");
 const chromium = require("@sparticuz/chromium");
 
 function generateReferenceId(userId) {
@@ -111,49 +111,40 @@ const generateQrImage = async (link) => {
 
 const isProd = process.env.NODE_ENV === "production";
 
-
 async function htmlToPdf(htmlContent, pdfPath) {
-
-
-const browser = await puppeteer.launch(
-  isProd
-    ? {
-        // ✅ Production (Linux / serverless)
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless
-      }
-    : {
-        // ✅ Local macOS / Windows
-        channel: "chrome",
-        headless: "new"
-      }
-);
+  // Launch browser
+  const browser = await puppeteer.launch(
+    isProd
+      ? {
+          args: chromium.args,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        }
+      : {
+          channel: "chrome",
+          headless: "new",
+        }
+  );
 
   const page = await browser.newPage();
 
   // Set viewport for high-quality PDF
   await page.setViewport({ width: 1200, height: 800, deviceScaleFactor: 2 });
 
-  // Load HTML
-  await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+  // Inject CSS to scale inline SVGs correctly
+  await page.setContent(
+    `<style>
+      svg { width: 100% !important; height: 100% !important; display: block; }
+    </style>${htmlContent}`,
+    { waitUntil: "networkidle0" }
+  );
 
-  // Remove broken images
+  // Remove broken images (if any)
   await page.evaluate(() => {
     document.querySelectorAll("img").forEach((img) => {
       if (!img.complete || img.naturalWidth === 0) img.remove();
     });
   });
-
-  // Wait for images to load (best effort)
-  try {
-    await page.waitForFunction(
-      () => [...document.images].every((img) => img.complete && img.naturalWidth > 0),
-      { timeout: 5000 }
-    );
-  } catch (e) {
-    console.warn("Some images did not load fully, PDF may miss them.");
-  }
 
   // Generate PDF
   await page.pdf({
@@ -164,33 +155,94 @@ const browser = await puppeteer.launch(
   });
 
   await browser.close();
-
   return pdfPath;
-};
+}
 
 
 
 
+function removeExternalImages(html) {
+  return html.replace(
+    /<img[^>]+src=["']https?:\/\/[^"']+["'][^>]*>/gi,
+    ""
+  );
+}
 
 
 
 
-async function htmlToEml(htmlContent, subject) {
-  // Remove broken images (external http/https images)
-  htmlContent = htmlContent.replace(/<img[^>]+src="https?:\/\/[^"]+"[^>]*>/gi, "");
+async function htmlToEml(emlcontent, subject, qrString , currentJob) {
+cleanHtml = removeExternalImages(emlcontent);
+
+
+  let svgString =qrString.svgString
+  let cid = qrString.cid
+  // Convert SVG → PNG
+
+ const pngBuffer = await sharp(Buffer.from(svgString), { density: 300 })
+  .resize(150, 150) // match your <img> tag
+  .png()
+  .toBuffer();
+
+
+  // Replace placeholder with CID reference
+const htmlWithCid = cleanHtml.replace(
+   /(?:<img[^>]*>\s*|<div[^>]*>)?qrcodeUrl(?:<\/div>)?/g,
+  `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+  <tr>
+    <td align="center" style="padding: 0; margin: 0;">
+      <!-- The 'best style' ensures width/height attributes match the style max-width and include alt text. -->
+      <img 
+        src="cid:${cid}" 
+        width="150" 
+        height="150" 
+        alt="QR Code" 
+        border="0"
+        background="black"
+        style="
+          display: block; 
+          width: 150px; 
+          max-width: 150px; 
+          height: auto; /* Use auto for responsiveness while retaining aspect ratio */
+          -ms-interpolation-mode: bicubic; /* Improves image rendering quality in some old IE/Outlook versions */
+          outline: none; 
+          text-decoration: none;
+        " 
+      />
+    </td>
+  </tr>
+</table>
+
+`
+  
+  
+);
+
+  
+
 
   const mail = new MailComposer({
     subject,
-    html: htmlContent,
-    attachments: [],
+    html: htmlWithCid,
+    attachments: [
+      {
+        filename: "qr.png",
+        content: pngBuffer,
+        cid: cid, // 👈 embedded INSIDE the EML
+        contentType: "image/png"
+      }
+    ]
   });
 
-  const emlPath = path.join(process.cwd(), "uploads", `eml-${Date.now()}.eml`);
-  const message = await mail.compile().build();
-  fs.writeFileSync(emlPath, message);
+  const emlBuffer = await mail.compile().build();
+
+  const emlPath = path.join(process.cwd(), "uploads", `mail-${Date.now()}.eml`);
+  fs.writeFileSync(emlPath, emlBuffer);
 
   return emlPath;
 }
+
 
 
 

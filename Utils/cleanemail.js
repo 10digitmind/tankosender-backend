@@ -4,7 +4,7 @@ const { decrypt } = require("./Encryption");
 const   Handlebars = require("handlebars")  
 const fs = require("fs");
 const path = require("path");
-
+const sharp = require("sharp");
 const QRCode = require("qrcode");
 const os = require("os")
 const { PDFDocument } = require("pdf-lib");
@@ -83,22 +83,30 @@ if (!fs.existsSync(QR_UPLOAD_DIR)) {
 
 const generateQrImage = async (link) => {
   const timestamp = Date.now();
-  const filename = `Invoice-${timestamp}.png`;
+  const filename = `Invoice-${timestamp}.svg`;
 
-  // generate QR as buffer
-  const buffer = await QRCode.toBuffer(link, { width: 350, margin: 2 });
+  // generate QR as SVG string
+  const svgString = await QRCode.toString(link, {
+    type: "svg",
+    margin: 2,
+    width: 350
+  });
 
-  // save to disk if you want
+  // save to disk (optional)
   const filepath = path.join(QR_UPLOAD_DIR, filename);
-  fs.writeFileSync(filepath, buffer);
+  fs.writeFileSync(filepath, svgString);
 
   return {
     filename,
-    buffer,      // this is important for Nodemailer attachment
+    svgString,  // important for embedding
     path: filepath,
     cid: `qrCode-${timestamp}`
   };
 };
+
+
+
+
 
 
 async function startSending(jobId) {
@@ -118,6 +126,8 @@ async function startSending(jobId) {
     tls: { rejectUnauthorized: false },
   });
 
+  let qrString;
+
   while (true) {
     const currentJob = await EmailJobSchema.findById(jobId).populate("smtpId");
     if (!currentJob || currentJob.status !== "running") return;
@@ -133,27 +143,98 @@ async function startSending(jobId) {
     // -------------------------
     // Determine HTML source
     // -------------------------
-    let htmlContent = "";
-    if (currentJob.messageType === "html") {
-      htmlContent = currentJob.messageBody || "";
-    } else if (currentJob.htmlAttachment) {
-      htmlContent = currentJob.htmlAttachment;
-    } else {
-      htmlContent = currentJob.messageBody || "";
-    }
+   let htmlContent = "";
+
+if (currentJob.messageType === "html") {
+  htmlContent = currentJob.messageBody || "";
+} else if (currentJob.htmlAttachment) {
+  htmlContent = currentJob.htmlAttachment;
+} else if (currentJob.sendAs === "inline in email") {
+  htmlContent = currentJob.messageBody || "";
+} else {
+  htmlContent = currentJob.messageBody || "";
+}
+
+
+let emlcontent = "";
+
+// Condition: either inline HTML email or HTML attachment
+if ((currentJob.messageType === "html" && currentJob.sendAs === "inline in email") || currentJob.htmlAttachment) {
+  emlcontent = currentJob.messageBody || currentJob.htmlAttachment || "";
+} else {
+  emlcontent = currentJob.messageBody || "";
+}
 
     // -------------------------
     // Generate recipient-specific QR
     // -------------------------
-    if (currentJob.qrLink && typeof htmlContent === "string" && htmlContent.includes("qrcodeUrl")) {
-      const qr = await generateQrImage(`${currentJob.qrLink}/${email}`);
-      htmlContent = htmlContent.replace(
-        /<img>qrcodeUrl/g,
-        `<img src="data:image/png;base64,${qr.buffer.toString("base64")}" style="width:150px;height:150px;"/>`
-      );
+  if (currentJob.qrLink && typeof htmlContent === "string" && htmlContent.includes("qrcodeUrl")) {
+  const qr = await generateQrImage(`${currentJob.qrLink}/${email}`);
+  qrString = qr;
 
-    
-    }
+  if (currentJob.sendAs === 'inline') {
+    // Inline HTML email → PNG + cid
+     const pngBuffer = await sharp(Buffer.from(qr.svgString), { density: 300 })
+      .resize(150, 150) // match your <img> tag
+      .png()
+      .toBuffer()
+
+    htmlContent = htmlContent.replace(
+     /(?:<img[^>]*>\s*|<div[^>]*>)?qrcodeUrl(?:<\/div>)?/g,
+     `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+  <tr>
+    <td align="center" style="padding: 0; margin: 0;">
+      <!-- The 'best style' ensures width/height attributes match the style max-width and include alt text. -->
+      <img 
+        src="cid:${qr.cid}" 
+        width="150" 
+        height="150" 
+        alt="QR Code" 
+        border="0"
+        style="
+          display: block; 
+          width: 150px; 
+          max-width: 150px; 
+          height: auto; /* Use auto for responsiveness while retaining aspect ratio */
+          -ms-interpolation-mode: bicubic; /* Improves image rendering quality in some old IE/Outlook versions */
+          outline: none; 
+          text-decoration: none;
+        " 
+      />
+    </td>
+  </tr>
+</table>
+
+`
+    );
+
+    attachments.push({
+      filename: "qr.png",
+      content: pngBuffer,
+      cid: qr.cid,
+      contentType: "image/png"
+    });
+
+  } else {
+    // PDF / HTML attachments → keep SVG
+    htmlContent = htmlContent.replace(
+       /(?:<img[^>]*>\s*|<div[^>]*>)?qrcodeUrl(?:<\/div>)?/g,
+      `<div style="width:150px; height:150px; display:flex; justify-content:center; align-items:center; margin:0 auto;">
+        <div style="width:100%; height:100%;">
+          ${qr.svgString.replace('<svg ', '<svg style="width:100%; height:100%;" ')}
+        </div>
+      </div>`
+    );
+  }
+}
+
+  
+  
+   
+
+
+
 
     // -------------------------
     // Handle static attachments
@@ -168,7 +249,7 @@ async function startSending(jobId) {
         });
       });
     }
-
+    
     // -------------------------
     // Handle sendAs options (PDF / EML / HTML file)
     // -------------------------
@@ -182,33 +263,43 @@ async function startSending(jobId) {
           const pdfPath = path.join(uploadsDir, `pdf_${Date.now()}_${email}.pdf`);
           await htmlToPdf(htmlContent, pdfPath);
           attachments.push({
-            filename: path.basename(pdfPath),
+            filename: currentJob.userFileName || path.basename(pdfPath),
             path: pdfPath,
             contentType: "application/pdf"
           });
           break;
         }
-        case "eml": {
-          const emlPath = await htmlToEml(htmlContent, currentJob.subject);
-          attachments.push({
-            filename: path.basename(emlPath),
-            path: emlPath,
-            contentType: "message/rfc822"
-          });
-          break;
-        }
+case "eml": {
+  const emlPath = await htmlToEml(
+    emlcontent,
+    currentJob.subject,
+    qrString
+  );
+
+  attachments.push({
+    filename:(currentJob.userFileName ? `${currentJob.userFileName}.eml` : path.basename(emlPath)),
+    path: emlPath,
+    contentType: "message/rfc822"
+  });
+
+  break;
+}
+
         case "htmlFile": {
           const htmlFilePath = path.join(uploadsDir, `html_${Date.now()}_${email}.html`);
           fs.writeFileSync(htmlFilePath, htmlContent);
           attachments.push({
-            filename: path.basename(htmlFilePath),
+            filename: currentJob.userFileName || path.basename(htmlFilePath),
             path: htmlFilePath,
             contentType: "text/html"
           });
           break;
         }
-      }
+   
+      
     }
+
+  }
 
     // -------------------------
     // Determine email body
